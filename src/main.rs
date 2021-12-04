@@ -3,7 +3,6 @@ use rand::{RngCore};
 use sha2::{Digest, Sha256};
 use sha2::digest::generic_array::GenericArray;
 
-const NUM_ZEROS: usize = 4;
 const NONCE_SIZE: usize = 4;
 
 fn main() {
@@ -23,33 +22,33 @@ fn main() {
     let mut count = 0;
     let (found_result, nonce) = loop {
         count += 1;
-        // get some random data:
         let mut random_bytes = [0u8; NONCE_SIZE];
         rand::thread_rng().fill_bytes(&mut random_bytes);
 
-        let nonce = format!("{:x?}", &random_bytes);
-        println!("Nonce: {:?}", &nonce);
-
         let result = sha256_hash(&random_bytes);
-        println!("Result: {:?}", &result);
-
-        // let result_in_hex = format!("{:x}", result);
-        let is_match = check_result_hex(&format!("{:x}", &result));
-        println!("Is Match: {}", is_match);
+        let is_match = check_result_as_hex(&hex::encode(&result));
 
         if is_match {
             break (result, random_bytes);
         }
+
+        if count % 5000 == 0 {
+            println!("Tick:  {}", count);
+        }
     };
 
-    println!("<<< FOUND-COUNT >>>{}", count);
-    println!("raw-- Nonce: {:?}, Result: {:?}", &nonce, &found_result);
-    println!("hex-- Nonce: {:x?}, Result: {:?}", &nonce, format!("{:x}", &found_result));
+    println!("Nonce: {:?}", &hex::encode(&nonce));
+    println!("Result: {:?}", &hex::encode(&found_result));
 }
 
-fn check_result_hex(hex: &str) -> bool {
-    let first_n = &hex[..NUM_ZEROS];
-
-    println!("First N: {:?}", first_n);
-    first_n.chars().all(|b| b == '0')
+fn check_result_as_hex(hex: &str) -> bool {
+    let len = hex.len();
+    let last = &hex[len - 2..];
+    if last == "fe" {
+        let second_to_last = &hex[len - 4..len - 2];
+        if second_to_last == "ca" {
+            return true;
+        }
+    }
+    false
 }
